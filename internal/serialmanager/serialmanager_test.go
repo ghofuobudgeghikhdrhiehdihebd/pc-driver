@@ -3,6 +3,7 @@ package serialmanager
 import (
 	"bytes"
 	"errors"
+	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/protocol"
 	"io"
 	"strings"
 	"testing"
@@ -178,5 +179,29 @@ func TestIdentifyAirLockRejectsUnknownDevice(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("expected handshake to fail for an unknown device")
+	}
+}
+
+func TestSendAuthorizationRequest(t *testing.T) {
+	port := &mockPort{}
+	manager := New()
+	manager.port = port
+
+	request := protocol.AuthorizationRequest{
+		Type:      protocol.TypeAuthorizationRequest,
+		RequestID: "req-001",
+		Action:    "read",
+		Resource:  "report.pdf",
+	}
+
+	err := manager.SendAuthorizationRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := "{\"type\":\"authorization_request\",\"request_id\":\"req-001\",\"action\":\"read\",\"resource\":\"report.pdf\"}\n"
+
+	if got := port.outgoing.String(); got != expected {
+		t.Fatalf("expected %q, got %q", expected, got)
 	}
 }

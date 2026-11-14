@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/protocol"
 	"go.bug.st/serial"
 )
 
@@ -148,6 +149,16 @@ func (m *Manager) Send(message string) error {
 	}
 
 	return nil
+}
+
+// SendAuthorizationRequest encodes and sends an authorization request to AirLock.
+func (m *Manager) SendAuthorizationRequest(request protocol.AuthorizationRequest) error {
+	data, err := protocol.EncodeMessage(request)
+	if err != nil {
+		return fmt.Errorf("encode authorization request: %w", err)
+	}
+
+	return m.Send(strings.TrimSuffix(string(data), "\n"))
 }
 
 // Receive reads the next available data from AirLock.
