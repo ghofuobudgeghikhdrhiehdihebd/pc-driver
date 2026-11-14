@@ -42,7 +42,7 @@ type pseudoToolCall struct {
 	Arguments map[string]string `json:"arguments"`
 }
 
-func main() {
+func runChatServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/chat", chatHandler)
 	mux.HandleFunc("/health", healthHandler)
