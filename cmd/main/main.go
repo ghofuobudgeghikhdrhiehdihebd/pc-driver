@@ -1,9 +1,16 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/btserial"
 	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/mcpcomm"
 	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/ollamaish"
 	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/state"
@@ -11,6 +18,14 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		if err := btserial.Run(ctx, btserial.Config{Device: os.Getenv("AIRLOCK_BT_DEVICE")}); err != nil {
+			log.Printf("bluetooth console stopped: %v", err)
+		}
+	}()
+
 	state := &statepkg.State{
 		Mux: http.NewServeMux(),
 	}
@@ -24,8 +39,18 @@ func main() {
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	err := server.ListenAndServe()
-	if err != nil {
-		panic(err)
+	serverErr := make(chan error, 1)
+	go func() { serverErr <- server.ListenAndServe() }()
+	select {
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("HTTP shutdown: %v", err)
+		}
 	}
 }
