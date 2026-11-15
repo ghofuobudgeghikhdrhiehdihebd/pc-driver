@@ -4,16 +4,21 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/mcpcomm"
 	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/ollamaish"
+	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/internal/state"
 	"github.com/ghofuobudgeghikhdrhiehdihebd/pc-usbc-int/pkg/httphelpers"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	ollamaish.RegisterAll(mux)
+	state := &statepkg.State{
+		Mux: http.NewServeMux(),
+	}
+	ollamaish.RegisterAll(state)
+	mcpcomm.RegisterAll(state)
 	server := &http.Server{
 		Addr:              ":11434",
-		Handler:           httphelpers.WithCORS(httphelpers.WithLogging(mux)),
+		Handler:           httphelpers.WithCORS(httphelpers.WithLogging(state.Mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
